@@ -1,75 +1,123 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import React from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <ThemedView style={styles.header}>
+          <IconSymbol name="list.bullet" size={32} color="#007AFF" />
+          <ThemedText type="title" style={styles.title}>All Expenses Overview</ThemedText>
+        </ThemedView>
+        
+        <ThemedView style={styles.section}>
+          <ThemedText type="subtitle">Overview</ThemedText>
+          <ThemedText style={styles.description}>
+            View all your expenses in one place. This screen will show both incoming and outgoing transactions.
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.statsContainer}>
+          <ThemedView style={styles.statCard}>
+            <IconSymbol name="arrow.down.circle.fill" size={24} color="#28a745" />
+            <ThemedText style={styles.statLabel}>Incoming</ThemedText>
+            <ThemedText style={styles.statAmount}>$0.00</ThemedText>
+          </ThemedView>
+          
+          <ThemedView style={styles.statCard}>
+            <IconSymbol name="arrow.up.circle.fill" size={24} color="#dc3545" />
+            <ThemedText style={styles.statLabel}>Outgoing</ThemedText>
+            <ThemedText style={styles.statAmount}>$0.00</ThemedText>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedView style={styles.section}>
+          <ThemedText type="subtitle">Recent Transactions</ThemedText>
+          <ThemedText style={styles.placeholder}>
+            No expenses recorded yet. Start tracking your expenses to see them here.
+          </ThemedText>
+          
+          <ThemedView style={styles.quickActions}>
+            <ThemedText style={styles.quickActionsTitle}>Quick Actions:</ThemedText>
+            <ThemedText style={styles.quickActionItem}>• Add new expense</ThemedText>
+            <ThemedText style={styles.quickActionItem}>• Record income</ThemedText>
+            <ThemedText style={styles.quickActionItem}>• View reports</ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
+  content: {
+    padding: 20,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  title: {
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 25,
+  },
+  description: {
+    marginTop: 10,
+    lineHeight: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 25,
+    gap: 15,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 14,
+    marginTop: 8,
+    opacity: 0.7,
+  },
+  statAmount: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  placeholder: {
+    marginTop: 10,
+    fontStyle: 'italic',
+    opacity: 0.7,
+  },
+  quickActions: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 8,
+  },
+  quickActionsTitle: {
+    fontWeight: '600',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  quickActionItem: {
+    marginLeft: 10,
+    marginBottom: 4,
+    opacity: 0.8,
   },
 });
