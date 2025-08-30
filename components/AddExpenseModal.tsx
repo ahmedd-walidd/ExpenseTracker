@@ -3,14 +3,14 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface AddExpenseModalProps {
@@ -18,6 +18,7 @@ interface AddExpenseModalProps {
   onClose: () => void;
   onAddExpense: (expense: {
     amount: number;
+    title: string;
     description: string;
     type: 'incoming' | 'outgoing';
     date: Date;
@@ -26,6 +27,7 @@ interface AddExpenseModalProps {
 
 export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddExpenseModalProps) {
   const [amount, setAmount] = useState('');
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'incoming' | 'outgoing'>('outgoing');
   const colorScheme = useColorScheme();
@@ -39,6 +41,11 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
       return;
     }
     
+    if (!title.trim()) {
+      Alert.alert('Missing Title', 'Please enter a title');
+      return;
+    }
+    
     if (!description.trim()) {
       Alert.alert('Missing Description', 'Please enter a description');
       return;
@@ -46,6 +53,7 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
 
     onAddExpense({
       amount: numAmount,
+      title: title.trim(),
       description: description.trim(),
       type,
       date: new Date(),
@@ -53,6 +61,7 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
 
     // Reset form
     setAmount('');
+    setTitle('');
     setDescription('');
     setType('outgoing');
     onClose();
@@ -73,12 +82,25 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Add Expense</Text>
           <TouchableOpacity onPress={handleAddExpense} style={styles.saveButton}>
-            <Text style={[styles.saveButtonText, { color: colors.tint }]}>Save</Text>
+            <IconSymbol size={24} name="checkmark" color="white" />
           </TouchableOpacity>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
+          {/* Title Input */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Title</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Enter title..."
+              placeholderTextColor={colors.tabIconDefault}
+              autoFocus
+            />
+          </View>
+
           {/* Amount Input */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Amount</Text>
@@ -89,7 +111,6 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
               placeholder="0.00"
               placeholderTextColor={colors.tabIconDefault}
               keyboardType="numeric"
-              autoFocus
             />
           </View>
 
@@ -114,7 +135,7 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
                 style={[
                   styles.typeButton,
                   { backgroundColor: colors.card, borderColor: colors.border },
-                  type === 'incoming' && { backgroundColor: colors.tint }
+                  type === 'incoming' && { backgroundColor: '#22c55e', borderColor: '#22c55e' }
                 ]}
                 onPress={() => setType('incoming')}
               >
@@ -127,7 +148,7 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
                   styles.typeButtonText, 
                   { color: type === 'incoming' ? 'white' : colors.text }
                 ]}>
-                  Incoming
+                  Income
                 </Text>
               </TouchableOpacity>
               
@@ -135,7 +156,7 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
                 style={[
                   styles.typeButton,
                   { backgroundColor: colors.card, borderColor: colors.border },
-                  type === 'outgoing' && { backgroundColor: colors.tint }
+                  type === 'outgoing' && { backgroundColor: '#ef4444', borderColor: '#ef4444' }
                 ]}
                 onPress={() => setType('outgoing')}
               >
@@ -148,7 +169,7 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
                   styles.typeButtonText, 
                   { color: type === 'outgoing' ? 'white' : colors.text }
                 ]}>
-                  Outgoing
+                  Expense
                 </Text>
               </TouchableOpacity>
             </View>

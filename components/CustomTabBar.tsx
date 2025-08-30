@@ -19,6 +19,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   const handleAddExpense = (expense: {
     amount: number;
+    title: string;
     description: string;
     type: 'incoming' | 'outgoing';
     date: Date;
@@ -36,6 +37,16 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   return (
     <>
+      {/* Floating Add Button */}
+      <TouchableOpacity
+        style={[styles.floatingAddButton, { backgroundColor: 'white' }]}
+        onPress={() => setModalVisible(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Add expense"
+      >
+        <IconSymbol size={24} name="plus" color="black" />
+      </TouchableOpacity>
+
       <View style={[styles.tabBar, { backgroundColor: colors.background }]}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -66,41 +77,32 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
           const tabIcon = options.tabBarIcon;
 
-          // Insert the plus button after the second tab (between incoming and outgoing)
           return (
-            <React.Fragment key={route.key}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={options.tabBarAccessibilityLabel}
-                onPress={onPress}
-                style={styles.tab}
-              >
-                {tabIcon && tabIcon({ 
-                  focused: isFocused, 
-                  color: isFocused ? colors.tabIconSelected : colors.tabIconDefault,
-                  size: 28 
-                })}
-                <Text style={[
-                  styles.tabLabel,
-                  { color: isFocused ? colors.tabIconSelected : colors.tabIconDefault }
-                ]}>
-                  {typeof label === 'string' ? label : 'Tab'}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Add the plus button after the incoming tab */}
-              {route.name === 'incoming' && (
-                <TouchableOpacity
-                  style={[styles.addButton, { backgroundColor: 'white' }]}
-                  onPress={() => setModalVisible(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add expense"
-                >
-                  <IconSymbol size={24} name="plus" color="black" />
-                </TouchableOpacity>
-              )}
-            </React.Fragment>
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              onPress={onPress}
+              style={[
+                styles.tab,
+                // Add spacing for the floating button in the middle
+                route.name === 'incoming' && styles.tabBeforeButton,
+                route.name === 'outgoing' && styles.tabAfterButton,
+              ]}
+            >
+              {tabIcon && tabIcon({ 
+                focused: isFocused, 
+                color: isFocused ? colors.tabIconSelected : colors.tabIconDefault,
+                size: 28 
+              })}
+              <Text style={[
+                styles.tabLabel,
+                { color: isFocused ? colors.tabIconSelected : colors.tabIconDefault }
+              ]}>
+                {typeof label === 'string' ? label : 'Tab'}
+              </Text>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -128,9 +130,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
+  tabBeforeButton: {
+    marginRight: 28, // Make space for the floating button
+  },
+  tabAfterButton: {
+    marginLeft: 28, // Make space for the floating button
+  },
   tabLabel: {
     fontSize: 12,
     marginTop: 4,
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    bottom: Platform.OS === 'ios' ? 84 : 66, // Float above the tab bar
+    alignSelf: 'center',
+    left: '50%',
+    marginLeft: -28, // Center the button (half of width)
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    zIndex: 1000,
   },
   addButton: {
     width: 56,
