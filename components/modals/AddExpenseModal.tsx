@@ -1,7 +1,9 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useCreateExpense } from '@/hooks/useExpenses';
 import React, { useState } from 'react';
 import {
   Modal,
@@ -40,7 +42,7 @@ const expenseSchema = yup.object().shape({
 interface AddExpenseModalProps {
   visible: boolean;
   onClose: () => void;
-  onAddExpense: (expense: {
+  onAddExpense?: (expense: {
     amount: number;
     title: string;
     description: string;
@@ -57,9 +59,13 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
   const [errors, setErrors] = useState<Record<string, string>>({});
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { formatAmount } = useCurrency();
+  const { formatAmount, selectedCurrency } = useCurrency();
+  const { user } = useAuth();
+  const createExpenseMutation = useCreateExpense();
 
   const handleAddExpense = async () => {
+    if (createExpenseMutation.isPending) return;
+    
     try {
       // Clear previous errors
       setErrors({});
@@ -74,14 +80,37 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
 
       await expenseSchema.validate(formData, { abortEarly: false });
 
-      // If validation passes, add the expense
-      onAddExpense({
-        amount: formData.amount,
+      if (!user?.id) {
+        Toast.show({
+          type: 'error',
+          text1: 'Authentication Error',
+          text2: 'Please log in to add expenses',
+          position: 'top',
+          visibilityTime: 3000,
+        });
+        return;
+      }
+
+      // Save to Supabase using TanStack Query
+      const data = await createExpenseMutation.mutateAsync({
+        user_id: user.id,
         title: formData.title,
-        description: formData.description,
+        amount: formData.amount,
+        description: formData.description || null,
         type: formData.type,
-        date: new Date(),
+        currency: selectedCurrency.code,
       });
+
+      // Call optional callback if provided
+      if (onAddExpense && data) {
+        onAddExpense({
+          amount: data.amount,
+          title: data.title,
+          description: data.description || '',
+          type: data.type,
+          date: new Date(data.created_at),
+        });
+      }
 
       // Reset form
       setAmount('');
@@ -101,18 +130,46 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
             : `You have spent ${formatAmount(formData.amount)}`,
           position: 'top',
           visibilityTime: 3000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
         });
       }, 300); // Small delay to ensure modal is closed first
-    } catch (validationErrors) {
-      if (validationErrors instanceof yup.ValidationError) {
+    } catch (error: any) {
+      // Handle both validation and service errors
+      if (error instanceof yup.ValidationError) {
         const errorMessages: Record<string, string> = {};
-        validationErrors.inner.forEach((error) => {
-          if (error.path) {
-            errorMessages[error.path] = error.message;
+        error.inner.forEach((err) => {
+          if (err.path) {
+            errorMessages[err.path] = err.message;
           }
         });
         setErrors(errorMessages);
+      } else {
+        // Service error (thrown by ExpenseService)
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to Save Expense',
+          text2: error.message || 'Please try again',
+          position: 'top',
+          visibilityTime: 3000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
       }
+    } finally {
+      // No need to manually manage loading state with TanStack Query
     }
   };
 
@@ -130,8 +187,16 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
             <IconSymbol size={24} name="xmark" color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Add Expense</Text>
-          <TouchableOpacity onPress={handleAddExpense} style={styles.saveButton}>
-            <IconSymbol size={24} name="checkmark" color="white" />
+          <TouchableOpacity 
+            onPress={handleAddExpense} 
+            style={[styles.saveButton, createExpenseMutation.isPending && styles.saveButtonDisabled]}
+            disabled={createExpenseMutation.isPending}
+          >
+            <IconSymbol 
+              size={24} 
+              name={createExpenseMutation.isPending ? "arrow.clockwise" : "checkmark"} 
+              color={colors.text} 
+            />
           </TouchableOpacity>
         </View>
 
@@ -139,7 +204,9 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
         <View style={styles.content}>
           {/* Title Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Title</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Title <Text style={styles.required}>*</Text>
+            </Text>
             <TextInput
               style={[
                 styles.input, 
@@ -167,7 +234,9 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
 
           {/* Amount Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Amount</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Amount <Text style={styles.required}>*</Text>
+            </Text>
             <TextInput
               style={[
                 styles.input, 
@@ -296,6 +365,9 @@ const styles = StyleSheet.create({
   saveButton: {
     padding: 8,
   },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
@@ -341,5 +413,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
     fontWeight: '500',
+  },
+  required: {
+    color: '#ef4444',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

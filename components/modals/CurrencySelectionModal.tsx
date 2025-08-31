@@ -36,7 +36,7 @@ export default function CurrencySelectionModal({ visible, onClose }: CurrencySel
         style={[
           styles.currencyItem,
           { backgroundColor: colors.card, borderColor: colors.border },
-          isSelected && { backgroundColor: colors.tint, borderColor: colors.tint }
+          isSelected && { backgroundColor: '#007AFF', borderColor: '#007AFF' }
         ]}
         onPress={() => handleCurrencySelect(item)}
       >
@@ -51,7 +51,7 @@ export default function CurrencySelectionModal({ visible, onClose }: CurrencySel
             </Text>
             <Text style={[
               styles.currencyCode,
-              { color: isSelected ? 'white' : colors.tabIconDefault }
+              { color: isSelected ? 'rgba(255, 255, 255, 0.8)' : colors.tabIconDefault }
             ]}>
               {item.code} - {item.symbol}
             </Text>

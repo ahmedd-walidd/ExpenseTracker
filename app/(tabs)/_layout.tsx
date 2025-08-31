@@ -1,16 +1,32 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 
 import CustomTabBar from '@/components/CustomTabBar';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { user, loading } = useAuth();
+
+  // Show loading spinner while checking authentication state
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // Redirect to login if user is not authenticated
+  if (!user) {
+    return <Redirect href="/auth/login" />;
+  }
 
   return (
     <Tabs

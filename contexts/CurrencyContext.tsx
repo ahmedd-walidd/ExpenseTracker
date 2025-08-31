@@ -1,5 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile, useUpdateCurrency } from '@/hooks/useProfile';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
 export interface Currency {
   code: string;
@@ -13,29 +15,70 @@ export const currencies: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
   { code: 'EGP', name: 'Egyptian Pound', symbol: 'E£', flag: '🇪🇬' },
   { code: 'SAR', name: 'Saudi Riyal', symbol: 'ر.س', flag: '🇸🇦' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '🇨🇦' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
 ];
 
 interface CurrencyContextType {
   selectedCurrency: Currency;
-  setCurrency: (currency: Currency) => void;
+  setCurrency: (currency: Currency) => Promise<void>;
   formatAmount: (amount: number) => string;
+  isUpdating: boolean;
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
+// Storage adapter that works for both native and web
+const createStorageAdapter = () => {
+  if (Platform.OS === 'web') {
+    return {
+      getItem: (key: string) => {
+        if (typeof window !== 'undefined') {
+          return Promise.resolve(window.localStorage.getItem(key));
+        }
+        return Promise.resolve(null);
+      },
+      setItem: (key: string, value: string) => {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, value);
+        }
+        return Promise.resolve();
+      },
+    };
+  }
+  // For native, we'll use AsyncStorage
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  return AsyncStorage;
+};
+
+const storage = createStorageAdapter();
 const CURRENCY_STORAGE_KEY = '@expense_tracker_currency';
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies[0]); // Default to USD
+  const { user } = useAuth();
+  const { data: profile } = useProfile();
+  const updateCurrencyMutation = useUpdateCurrency();
 
-  // Load saved currency on app start
+  // Load currency preference (from profile if logged in, otherwise from local storage)
   useEffect(() => {
-    loadSavedCurrency();
-  }, []);
+    if (user && profile?.currency) {
+      // Use currency from user profile
+      const profileCurrency = currencies.find(c => c.code === profile.currency);
+      if (profileCurrency) {
+        setSelectedCurrency(profileCurrency);
+      }
+    } else {
+      // Load from local storage for guest users or as fallback
+      loadSavedCurrency();
+    }
+  }, [user, profile]);
 
   const loadSavedCurrency = async () => {
     try {
-      const savedCurrencyCode = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
+      const savedCurrencyCode = await storage.getItem(CURRENCY_STORAGE_KEY);
       if (savedCurrencyCode) {
         const savedCurrency = currencies.find(c => c.code === savedCurrencyCode);
         if (savedCurrency) {
@@ -50,9 +93,16 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const setCurrency = async (currency: Currency) => {
     try {
       setSelectedCurrency(currency);
-      await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currency.code);
+
+      // Save to local storage immediately
+      await storage.setItem(CURRENCY_STORAGE_KEY, currency.code);
+
+      // If user is logged in, also update their profile
+      if (user) {
+        updateCurrencyMutation.mutate({ currency: currency.code });
+      }
     } catch (error) {
-      console.error('Error saving currency:', error);
+      console.error('Error setting currency:', error);
     }
   };
 
@@ -65,6 +115,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       selectedCurrency,
       setCurrency,
       formatAmount,
+      isUpdating: updateCurrencyMutation.isPending,
     }}>
       {children}
     </CurrencyContext.Provider>

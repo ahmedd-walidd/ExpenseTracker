@@ -2,35 +2,21 @@ import CurrencySelectionModal from '@/components/modals/CurrencySelectionModal';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useProfile } from '@/hooks/useProfile';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const { selectedCurrency } = useCurrency();
+  const { user, signOut } = useAuth();
+  const { data: profile } = useProfile();
   const insets = useSafeAreaInsets();
 
-  const handleLogin = () => {
-    Alert.alert(
-      'Login',
-      'Login functionality would be implemented here',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Login',
-          onPress: () => setIsLoggedIn(true),
-        },
-      ]
-    );
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -41,7 +27,13 @@ export default function SettingsScreen() {
         },
         {
           text: 'Logout',
-          onPress: () => setIsLoggedIn(false),
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
           style: 'destructive',
         },
       ]
@@ -62,35 +54,43 @@ export default function SettingsScreen() {
           <ThemedView style={styles.settingItem}>
             <ThemedView style={styles.settingInfo}>
               <IconSymbol 
-                name={isLoggedIn ? "person.fill" : "person"} 
+                name={user ? "person.fill" : "person"} 
                 size={24} 
-                color={isLoggedIn ? "#28a745" : "#666"} 
+                color={user ? "#28a745" : "#666"} 
               />
               <ThemedView style={styles.settingText}>
-                <ThemedText type="defaultSemiBold">
-                  {isLoggedIn ? "Logged In" : "Not Logged In"}
+                <ThemedText 
+                  type="defaultSemiBold"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={true}
+                  minimumFontScale={0.8}
+                >
+                  {user ? `Hello, ${profile?.full_name || 'User'}` : "Not Logged In"}
                 </ThemedText>
-                <ThemedText style={styles.settingDescription}>
-                  {isLoggedIn ? "user@example.com" : "Sign in to sync your expenses"}
+                <ThemedText 
+                  style={styles.settingDescription}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit={true}
+                  minimumFontScale={0.7}
+                >
+                  {user ? user.email : "Sign in to sync your expenses"}
                 </ThemedText>
               </ThemedView>
             </ThemedView>
-            
-            <TouchableOpacity
-              style={[
-                styles.authButton,
-                isLoggedIn ? styles.logoutButton : styles.loginButton
-              ]}
-              onPress={isLoggedIn ? handleLogout : handleLogin}
-            >
-              <ThemedText style={[
-                styles.authButtonText,
-                isLoggedIn ? styles.logoutButtonText : styles.loginButtonText
-              ]}>
-                {isLoggedIn ? "Logout" : "Login"}
-              </ThemedText>
-            </TouchableOpacity>
           </ThemedView>
+            
+          {user && (
+            <ThemedView style={styles.logoutContainer}>
+              <TouchableOpacity
+                style={[styles.authButton, styles.logoutButton]}
+                onPress={handleLogout}
+              >
+                <ThemedText style={[styles.authButtonText, styles.logoutButtonText]}>
+                  Logout
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          )}
         </ThemedView>
 
         <ThemedView style={styles.section}>
@@ -205,6 +205,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.7,
     marginTop: 2,
+  },
+  logoutContainer: {
+    marginTop: 10,
+    alignItems: 'center',
   },
   authButton: {
     paddingHorizontal: 20,
