@@ -1,12 +1,16 @@
+import CurrencySelectionModal from '@/components/modals/CurrencySelectionModal';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
+  const { selectedCurrency } = useCurrency();
   const insets = useSafeAreaInsets();
 
   const handleLogin = () => {
@@ -105,13 +109,16 @@ export default function SettingsScreen() {
             <IconSymbol name="chevron.right" size={16} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
+          <TouchableOpacity 
+            style={styles.settingItem}
+            onPress={() => setCurrencyModalVisible(true)}
+          >
             <ThemedView style={styles.settingInfo}>
               <IconSymbol name="dollarsign.circle" size={24} color="#666" />
               <ThemedView style={styles.settingText}>
                 <ThemedText type="defaultSemiBold">Currency</ThemedText>
                 <ThemedText style={styles.settingDescription}>
-                  USD - US Dollar
+                  {selectedCurrency.flag} {selectedCurrency.name} ({selectedCurrency.symbol})
                 </ThemedText>
               </ThemedView>
             </ThemedView>
@@ -148,6 +155,11 @@ export default function SettingsScreen() {
           </ThemedView>
         </ThemedView>
       </ScrollView>
+      
+      <CurrencySelectionModal
+        visible={currencyModalVisible}
+        onClose={() => setCurrencyModalVisible(false)}
+      />
     </ThemedView>
   );
 }

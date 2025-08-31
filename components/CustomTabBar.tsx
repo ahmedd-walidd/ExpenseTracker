@@ -4,13 +4,13 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import React, { useState } from 'react';
 import {
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import AddExpenseModal from './AddExpenseModal';
+import AddExpenseModal from './modals/AddExpenseModal';
 
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const [modalVisible, setModalVisible] = useState(false);

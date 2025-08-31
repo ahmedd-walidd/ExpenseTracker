@@ -1,17 +1,41 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React, { useState } from 'react';
 import {
-  Alert,
   Modal,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import Toast from 'react-native-toast-message';
+import * as yup from 'yup';
+
+// Validation schema
+const expenseSchema = yup.object().shape({
+  title: yup
+    .string()
+    .trim()
+    .required('Title is required')
+    .min(2, 'Title must be at least 2 characters')
+    .max(50, 'Title must be less than 50 characters'),
+  amount: yup
+    .number()
+    .required('Amount is required')
+    .positive('Amount must be positive')
+    .max(999999, 'Amount cannot exceed 999,999'),
+  description: yup
+    .string()
+    .trim(),
+  type: yup
+    .string()
+    .oneOf(['incoming', 'outgoing'], 'Type must be either incoming or outgoing')
+    .required('Type is required'),
+});
 
 interface AddExpenseModalProps {
   visible: boolean;
@@ -30,41 +54,66 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'incoming' | 'outgoing'>('outgoing');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { formatAmount } = useCurrency();
 
-  const handleAddExpense = () => {
-    const numAmount = parseFloat(amount);
-    
-    if (!amount || isNaN(numAmount) || numAmount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount');
-      return;
-    }
-    
-    if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a title');
-      return;
-    }
-    
-    if (!description.trim()) {
-      Alert.alert('Missing Description', 'Please enter a description');
-      return;
-    }
+  const handleAddExpense = async () => {
+    try {
+      // Clear previous errors
+      setErrors({});
+      
+      // Validate the form data
+      const formData = {
+        title: title.trim(),
+        amount: parseFloat(amount) || 0,
+        description: description.trim(),
+        type,
+      };
 
-    onAddExpense({
-      amount: numAmount,
-      title: title.trim(),
-      description: description.trim(),
-      type,
-      date: new Date(),
-    });
+      await expenseSchema.validate(formData, { abortEarly: false });
 
-    // Reset form
-    setAmount('');
-    setTitle('');
-    setDescription('');
-    setType('outgoing');
-    onClose();
+      // If validation passes, add the expense
+      onAddExpense({
+        amount: formData.amount,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        date: new Date(),
+      });
+
+      // Reset form
+      setAmount('');
+      setTitle('');
+      setDescription('');
+      setType('outgoing');
+      setErrors({});
+      onClose();
+
+      // Show success toast after modal is closed
+      setTimeout(() => {
+        Toast.show({
+          type: formData.type === 'incoming' ? 'success' : 'error',
+          text1: 'Expense Added Successfully!',
+          text2: formData.type === 'incoming' 
+            ? `You have received ${formatAmount(formData.amount)}` 
+            : `You have spent ${formatAmount(formData.amount)}`,
+          position: 'top',
+          visibilityTime: 3000,
+        });
+      }, 300); // Small delay to ensure modal is closed first
+    } catch (validationErrors) {
+      if (validationErrors instanceof yup.ValidationError) {
+        const errorMessages: Record<string, string> = {};
+        validationErrors.inner.forEach((error) => {
+          if (error.path) {
+            errorMessages[error.path] = error.message;
+          }
+        });
+        setErrors(errorMessages);
+      }
+    }
   };
 
   return (
@@ -92,39 +141,84 @@ export default function AddExpenseModal({ visible, onClose, onAddExpense }: AddE
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Title</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+              style={[
+                styles.input, 
+                { backgroundColor: colors.card, color: colors.text, borderColor: errors.title ? '#ef4444' : colors.border }
+              ]}
               value={title}
-              onChangeText={setTitle}
+              onChangeText={(text) => {
+                setTitle(text);
+                if (errors.title) {
+                  const newErrors = { ...errors };
+                  delete newErrors.title;
+                  setErrors(newErrors);
+                }
+              }}
               placeholder="Enter title..."
               placeholderTextColor={colors.tabIconDefault}
               autoFocus
             />
+            {errors.title && (
+              <Text style={[styles.errorText, { color: '#ef4444' }]}>
+                {errors.title}
+              </Text>
+            )}
           </View>
 
           {/* Amount Input */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Amount</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+              style={[
+                styles.input, 
+                { backgroundColor: colors.card, color: colors.text, borderColor: errors.amount ? '#ef4444' : colors.border }
+              ]}
               value={amount}
-              onChangeText={setAmount}
+              onChangeText={(text) => {
+                setAmount(text);
+                if (errors.amount) {
+                  const newErrors = { ...errors };
+                  delete newErrors.amount;
+                  setErrors(newErrors);
+                }
+              }}
               placeholder="0.00"
               placeholderTextColor={colors.tabIconDefault}
               keyboardType="numeric"
             />
+            {errors.amount && (
+              <Text style={[styles.errorText, { color: '#ef4444' }]}>
+                {errors.amount}
+              </Text>
+            )}
           </View>
 
           {/* Description Input */}
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Description</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+              style={[
+                styles.input, 
+                { backgroundColor: colors.card, color: colors.text, borderColor: errors.description ? '#ef4444' : colors.border }
+              ]}
               value={description}
-              onChangeText={setDescription}
+              onChangeText={(text) => {
+                setDescription(text);
+                if (errors.description) {
+                  const newErrors = { ...errors };
+                  delete newErrors.description;
+                  setErrors(newErrors);
+                }
+              }}
               placeholder="Enter description..."
               placeholderTextColor={colors.tabIconDefault}
               multiline
             />
+            {errors.description && (
+              <Text style={[styles.errorText, { color: '#ef4444' }]}>
+                {errors.description}
+              </Text>
+            )}
           </View>
 
           {/* Type Selection */}
@@ -241,6 +335,11 @@ const styles = StyleSheet.create({
   },
   typeButtonText: {
     fontSize: 16,
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 14,
+    marginTop: 4,
     fontWeight: '500',
   },
 });
