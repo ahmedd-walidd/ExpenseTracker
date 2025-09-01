@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ExpenseService } from '@/services/ExpenseService';
 import { ExpenseFilters, ExpenseUpdate } from '@/types/expense';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 
 // Query keys for caching
 export const expenseKeys = {
@@ -101,14 +102,51 @@ export function useDeleteExpense() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: ExpenseService.deleteExpense,
-    onSuccess: () => {
+    mutationFn: ({ id, title }: { id: string; title?: string }) => ExpenseService.deleteExpense(id),
+    onSuccess: (_, variables) => {
       // Invalidate and refetch expenses
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: expenseKeys.stats(user?.id || '') });
+      
+      // Show success toast with expense title if available
+      const expenseTitle = variables.title;
+      Toast.show({
+        type: 'error',
+        text1: 'Expense Deleted',
+        text2: expenseTitle 
+          ? `"${expenseTitle}" has been successfully removed`
+          : 'The expense has been successfully removed',
+        position: 'top',
+        visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
     },
     onError: (error) => {
       console.error('Failed to delete expense:', error);
+      
+      // Show error toast
+      Toast.show({
+        type: 'error',
+        text1: 'Delete Failed',
+        text2: 'Failed to delete expense. Please try again.',
+        position: 'top',
+        visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
     },
   });
 }

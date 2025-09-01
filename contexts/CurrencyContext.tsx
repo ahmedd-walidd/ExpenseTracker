@@ -16,9 +16,7 @@ export const currencies: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
   { code: 'SAR', name: 'Saudi Riyal', symbol: 'SAR', flag: '🇸🇦' },
   { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
   { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', flag: '🇨🇦' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
 ];
 
 interface CurrencyContextType {

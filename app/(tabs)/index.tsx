@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useExpenses, useExpenseStats } from '@/hooks/useExpenses';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { Expense } from '@/types/expense';
 import { sortExpenses, SortOrder, SortType } from '@/utils/sortExpenses';
 import React, { useMemo, useState } from 'react';
@@ -23,6 +24,7 @@ export default function HomeScreen() {
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [sortType, setSortType] = useState<SortType>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const textColor = useThemeColor({}, 'text');
   
   const recentExpenses = useMemo(() => {
     const rawExpenses = expenses?.slice(0, 10) || [];
@@ -105,14 +107,15 @@ export default function HomeScreen() {
             </ThemedText>
             <ThemedText 
               style={[styles.statAmount, { 
-                color: (stats?.netAmount || 0) >= 0 ? '#28a745' : '#dc3545' 
+                color: (stats?.netAmount || 0) === 0 ? textColor :
+                       (stats?.netAmount || 0) > 0 ? '#28a745' : '#dc3545' 
               }]}
               numberOfLines={1}
               adjustsFontSizeToFit={true}
               minimumFontScale={0.6}
             >
               {statsLoading ? '...' : 
-                (stats?.netAmount || 0) >= 0 
+                (stats?.netAmount || 0) > 0 
                   ? `+${formatAmount(stats?.netAmount || 0)}`
                   : formatAmount(stats?.netAmount || 0)
               }

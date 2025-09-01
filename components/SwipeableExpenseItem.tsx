@@ -49,7 +49,7 @@ export default function SwipeableExpenseItem({ item, onPress }: SwipeableExpense
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            deleteExpenseMutation.mutate(item.id);
+            deleteExpenseMutation.mutate({ id: item.id, title: item.title });
           },
         },
       ]
