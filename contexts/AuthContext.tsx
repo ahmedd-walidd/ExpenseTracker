@@ -86,7 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           id: data.user.id,
           email: data.user.email!,
           full_name: fullName || null,
-          currency: 'USD',
+          currency: 'EGP',
         });
       } catch (profileError) {
         console.error('Error creating profile:', profileError);

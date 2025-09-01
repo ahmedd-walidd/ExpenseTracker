@@ -24,13 +24,17 @@ export class ProfileService {
     full_name?: string | null;
     currency?: string;
   }): Promise<Profile> {
+    const now = new Date().toISOString();
+    
     const { data, error } = await supabase
       .from('profiles')
       .insert({
         id: profile.id,
         email: profile.email,
         full_name: profile.full_name || null,
-        currency: profile.currency || 'USD',
+        currency: profile.currency || 'EGP',
+        created_at: now,
+        updated_at: now,
       })
       .select()
       .single();
@@ -87,14 +91,24 @@ export class ProfileService {
     full_name?: string | null;
     currency?: string;
   }): Promise<Profile> {
+    const now = new Date().toISOString();
+    
+    // First check if profile exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', profile.id)
+      .single();
+
     const { data, error } = await supabase
       .from('profiles')
       .upsert({
         id: profile.id,
         email: profile.email,
         full_name: profile.full_name || null,
-        currency: profile.currency || 'USD',
-        updated_at: new Date().toISOString(),
+        currency: profile.currency || 'EGP',
+        created_at: existingProfile ? undefined : now, // Only set created_at if it's a new profile
+        updated_at: now,
       }, {
         onConflict: 'id'
       })
