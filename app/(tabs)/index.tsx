@@ -94,58 +94,22 @@ export default function HomeScreen() {
         </ThemedView>
 
         <ThemedView style={styles.statsContainer}>
-          <ThemedView style={styles.statCard}>
-            <IconSymbol name="arrow.down.circle.fill" size={24} color="#28a745" />
+          {/* Balance Card - Main focal point */}
+          <ThemedView style={styles.balanceCard}>
+            <IconSymbol name="equal.circle.fill" size={32} color="#007AFF" />
             <ThemedText 
-              style={styles.statLabel}
-              numberOfLines={1}
-            >
-              Incoming
-            </ThemedText>
-            <ThemedText 
-              style={styles.statAmount}
-              numberOfLines={1}
-              adjustsFontSizeToFit={true}
-              minimumFontScale={0.6}
-            >
-              {statsLoading ? '...' : `+${formatAmount(stats?.totalIncoming || 0)}`}
-            </ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.statCard}>
-            <IconSymbol name="arrow.up.circle.fill" size={24} color="#dc3545" />
-            <ThemedText 
-              style={styles.statLabel}
-              numberOfLines={1}
-            >
-              Outgoing
-            </ThemedText>
-            <ThemedText 
-              style={styles.statAmount}
-              numberOfLines={1}
-              adjustsFontSizeToFit={true}
-              minimumFontScale={0.6}
-            >
-              {statsLoading ? '...' : `-${formatAmount(stats?.totalOutgoing || 0)}`}
-            </ThemedText>
-          </ThemedView>
-          
-          <ThemedView style={styles.statCard}>
-            <IconSymbol name="equal.circle.fill" size={24} color="#007AFF" />
-            <ThemedText 
-              style={styles.statLabel}
+              style={styles.balanceLabel}
               numberOfLines={1}
             >
               Balance
             </ThemedText>
             <ThemedText 
-              style={[styles.statAmount, { 
+              style={[styles.balanceAmount, { 
                 color: (stats?.netAmount || 0) === 0 ? textColor :
                        (stats?.netAmount || 0) > 0 ? '#28a745' : '#dc3545' 
               }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit={true}
-              minimumFontScale={0.6}
+              numberOfLines={2}
+              textBreakStrategy="simple"
             >
               {statsLoading ? '...' : 
                 (stats?.netAmount || 0) === 0 
@@ -155,6 +119,45 @@ export default function HomeScreen() {
                     : `-${formatAmount(stats?.netAmount || 0)}`
               }
             </ThemedText>
+          </ThemedView>
+
+          {/* Incoming and Outgoing Cards - Secondary info */}
+          <ThemedView style={styles.secondaryStatsContainer}>
+            <ThemedView style={styles.statCard}>
+              <IconSymbol name="arrow.down.circle.fill" size={24} color="#28a745" />
+              <ThemedText 
+                style={styles.statLabel}
+                numberOfLines={1}
+              >
+                Incoming
+              </ThemedText>
+              <ThemedText 
+                style={styles.statAmount}
+                numberOfLines={1}
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.6}
+              >
+                {statsLoading ? '...' : `+${formatAmount(stats?.totalIncoming || 0)}`}
+              </ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.statCard}>
+              <IconSymbol name="arrow.up.circle.fill" size={24} color="#dc3545" />
+              <ThemedText 
+                style={styles.statLabel}
+                numberOfLines={1}
+              >
+                Outgoing
+              </ThemedText>
+              <ThemedText 
+                style={styles.statAmount}
+                numberOfLines={1}
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.6}
+              >
+                {statsLoading ? '...' : `-${formatAmount(stats?.totalOutgoing || 0)}`}
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
         </ThemedView>
 
@@ -231,9 +234,37 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   statsContainer: {
+    marginBottom: 25,
+  },
+  balanceCard: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 20,
+    minHeight: 160,
+    justifyContent: 'center',
+  },
+  balanceLabel: {
+    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    opacity: 0.8,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  balanceAmount: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginTop: 8,
+    marginBottom: 8,
+    textAlign: 'center',
+    lineHeight: 36,
+    paddingVertical: 4,
+  },
+  secondaryStatsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 25,
     gap: 15,
   },
   statCard: {

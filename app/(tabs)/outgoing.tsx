@@ -73,7 +73,7 @@ export default function OutgoingScreen() {
         <ThemedView style={styles.section}>
           <ThemedText type="subtitle">Money Spent</ThemedText>
           <ThemedText style={styles.description}>
-            Track all your expenses and spending for the selected time period.
+            Track all the money you've spent for the selected time period.
           </ThemedText>
           
           <ThemedView style={styles.timePeriodContainer}>

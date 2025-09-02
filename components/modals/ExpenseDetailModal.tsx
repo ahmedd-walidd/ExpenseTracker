@@ -30,7 +30,6 @@ interface FormData {
   description: string | null;
   amount: string;
   type: 'incoming' | 'outgoing';
-  category: string | null;
   created_at: string;
 }
 
@@ -41,12 +40,12 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
   const updateExpenseMutation = useUpdateExpense();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     title: '',
     description: null,
     amount: '',
     type: 'outgoing',
-    category: null,
     created_at: '',
   });
 
@@ -58,7 +57,6 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
         description: expense.description,
         amount: expense.amount.toString(),
         type: expense.type,
-        category: expense.category,
         created_at: expense.created_at,
       });
     }
@@ -70,13 +68,41 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
     try {
       // Validate required fields
       if (!formData.title.trim()) {
-        Alert.alert('Error', 'Title is required');
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Title is required',
+          position: 'top',
+          visibilityTime: 3000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
         return;
       }
 
       const amount = parseFloat(formData.amount);
       if (isNaN(amount) || amount <= 0) {
-        Alert.alert('Error', 'Please enter a valid amount greater than 0');
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Please enter a valid amount greater than 0',
+          position: 'top',
+          visibilityTime: 3000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },  
+        });
         return;
       }
 
@@ -86,10 +112,10 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
       if (formData.description !== expense.description) updates.description = formData.description?.trim() || null;
       if (amount !== expense.amount) updates.amount = amount;
       if (formData.type !== expense.type) updates.type = formData.type;
-      if (formData.category !== expense.category) updates.category = formData.category?.trim() || null;
 
       // Only update if there are changes
       if (Object.keys(updates).length === 0) {
+        setEditingField(null);
         setIsEditing(false);
         return;
       }
@@ -100,14 +126,24 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
       });
 
       Toast.show({
-        type: 'success',
+        type: 'info',
         text1: 'Expense Updated',
         text2: `"${formData.title}" has been successfully updated`,
         position: 'top',
         visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
       });
 
+      setEditingField(null);
       setIsEditing(false);
+      onClose(); // Close the modal so user can see the toast
     } catch (error) {
       console.error('Failed to update expense:', error);
       Toast.show({
@@ -116,6 +152,14 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
         text2: 'Failed to update expense. Please try again.',
         position: 'top',
         visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
       });
     }
   };
@@ -127,9 +171,55 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
       description: expense.description,
       amount: expense.amount.toString(),
       type: expense.type,
-      category: expense.category,
       created_at: expense.created_at,
     });
+    setEditingField(null);
+    setIsEditing(false);
+  };
+
+  const handleFieldPress = (fieldName: string) => {
+    setEditingField(fieldName);
+    setIsEditing(true);
+  };
+
+  const handleFieldBlur = async () => {
+    // Auto-save when field loses focus if there are changes
+    const amount = parseFloat(formData.amount);
+    const updates: any = {};
+    if (formData.title !== expense.title) updates.title = formData.title.trim();
+    if (formData.description !== expense.description) updates.description = formData.description?.trim() || null;
+    if (amount !== expense.amount && !isNaN(amount) && amount > 0) updates.amount = amount;
+    if (formData.type !== expense.type) updates.type = formData.type;
+
+    if (Object.keys(updates).length > 0 && formData.title.trim()) {
+      try {
+        await updateExpenseMutation.mutateAsync({
+          id: expense.id,
+          updates,
+        });
+        
+        Toast.show({
+          type: 'info',
+          text1: 'Changes Saved',
+          text2: 'Your changes have been automatically saved',
+          position: 'top',
+          visibilityTime: 2000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
+      } catch (error) {
+        // Reset to original values on error
+        handleCancel();
+      }
+    }
+    
+    setEditingField(null);
     setIsEditing(false);
   };
 
@@ -193,9 +283,9 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
             <IconSymbol size={24} name="xmark" color={colors.text} />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>
-            {isEditing ? 'Edit Expense' : 'Expense Details'}
+            {editingField ? 'Editing Expense' : 'Expense Details'}
           </ThemedText>
-          {isEditing ? (
+          {editingField ? (
             <View style={styles.headerActions}>
               <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
                 <ThemedText style={[styles.cancelText, { color: colors.text }]}>Cancel</ThemedText>
@@ -211,9 +301,7 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.editButton}>
-              <IconSymbol size={20} name="pencil" color="#007AFF" />
-            </TouchableOpacity>
+            <View style={styles.placeholder} />
           )}
         </View>
 
@@ -230,7 +318,7 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
               color={displayType === 'incoming' ? "#28a745" : "#dc3545"} 
             />
             <View style={styles.amountTextContainer}>
-              {isEditing ? (
+              {editingField === 'amount' || editingField === 'type' ? (
                 <View style={styles.editAmountContainer}>
                   <TouchableOpacity 
                     style={[
@@ -265,7 +353,7 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
                 </View>
               ) : null}
               
-              {isEditing ? (
+              {editingField === 'amount' ? (
                 <TextInput
                   style={[styles.amountInput, { color: displayType === 'incoming' ? '#28a745' : '#dc3545' }]}
                   value={formData.amount}
@@ -281,25 +369,31 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
                   placeholderTextColor={colors.text + '80'}
                   keyboardType="numeric"
                   returnKeyType="done"
-                  autoFocus={false}
+                  onBlur={handleFieldBlur}
+                  autoFocus
                 />
               ) : (
-                <ThemedText 
-                  style={[
-                    styles.amountText, 
-                    { color: displayType === 'incoming' ? '#28a745' : '#dc3545' }
-                  ]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit={true}
-                  minimumFontScale={0.3}
-                >
-                  {displayType === 'incoming' ? '+' : '-'}{formatAmount(displayAmount)}
-                </ThemedText>
+                <TouchableOpacity onPress={() => handleFieldPress('amount')}>
+                  <ThemedText 
+                    style={[
+                      styles.amountText, 
+                      styles.editableText,
+                      { color: displayType === 'incoming' ? '#28a745' : '#dc3545' }
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.3}
+                  >
+                    {displayType === 'incoming' ? '+' : '-'}{formatAmount(displayAmount)}
+                  </ThemedText>
+                </TouchableOpacity>
               )}
             </View>
-            <ThemedText style={styles.typeText}>
-              {displayType === 'incoming' ? 'Income' : 'Expense'}
-            </ThemedText>
+            <TouchableOpacity onPress={() => handleFieldPress('type')}>
+              <ThemedText style={[styles.typeText, styles.editableText]}>
+                {displayType === 'incoming' ? 'Income' : 'Expense'}
+              </ThemedText>
+            </TouchableOpacity>
           </ThemedView>
 
           {/* Details */}
@@ -308,24 +402,28 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
               <IconSymbol name="doc.text" size={20} color={colors.text} />
               <View style={styles.detailContent}>
                 <ThemedText style={styles.detailLabel}>Title</ThemedText>
-                {isEditing ? (
+                {editingField === 'title' ? (
                   <TextInput
                     style={[styles.detailInput, { color: colors.text, borderColor: colors.border }]}
                     value={formData.title}
                     onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
                     placeholder="Enter title"
                     placeholderTextColor={colors.text + '80'}
-                    returnKeyType="next"
+                    returnKeyType="done"
+                    onBlur={handleFieldBlur}
+                    autoFocus
                   />
                 ) : (
-                  <ThemedText 
-                    style={styles.detailValue}
-                    numberOfLines={2}
-                    adjustsFontSizeToFit={true}
-                    minimumFontScale={0.8}
-                  >
-                    {expense.title}
-                  </ThemedText>
+                  <TouchableOpacity onPress={() => handleFieldPress('title')}>
+                    <ThemedText 
+                      style={[styles.detailValue, styles.editableText]}
+                      numberOfLines={2}
+                      adjustsFontSizeToFit={true}
+                      minimumFontScale={0.8}
+                    >
+                      {expense.title}
+                    </ThemedText>
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -334,7 +432,7 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
               <IconSymbol name="text.quote" size={20} color={colors.text} />
               <View style={styles.detailContent}>
                 <ThemedText style={styles.detailLabel}>Description</ThemedText>
-                {isEditing ? (
+                {editingField === 'description' ? (
                   <TextInput
                     style={[styles.detailInput, styles.descriptionInput, { color: colors.text, borderColor: colors.border }]}
                     value={formData.description || ''}
@@ -344,33 +442,16 @@ export default function ExpenseDetailModal({ visible, onClose, expense }: Expens
                     multiline
                     numberOfLines={3}
                     textAlignVertical="top"
-                    returnKeyType="next"
+                    returnKeyType="done"
+                    onBlur={handleFieldBlur}
+                    autoFocus
                   />
                 ) : (
-                  <ThemedText style={styles.detailValue}>
-                    {expense.description || 'No description'}
-                  </ThemedText>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.detailRow}>
-              <IconSymbol name="tag" size={20} color={colors.text} />
-              <View style={styles.detailContent}>
-                <ThemedText style={styles.detailLabel}>Category</ThemedText>
-                {isEditing ? (
-                  <TextInput
-                    style={[styles.detailInput, { color: colors.text, borderColor: colors.border }]}
-                    value={formData.category || ''}
-                    onChangeText={(text) => setFormData(prev => ({ ...prev, category: text || null }))}
-                    placeholder="Enter category (optional)"
-                    placeholderTextColor={colors.text + '80'}
-                    returnKeyType="next"
-                  />
-                ) : (
-                  <ThemedText style={styles.detailValue}>
-                    {expense.category || 'No category'}
-                  </ThemedText>
+                  <TouchableOpacity onPress={() => handleFieldPress('description')}>
+                    <ThemedText style={[styles.detailValue, styles.editableText]}>
+                      {expense.description || 'No description'}
+                    </ThemedText>
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -544,6 +625,14 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  editableText: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginHorizontal: -8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   detailInput: {
     fontSize: 16,

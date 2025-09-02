@@ -7,14 +7,14 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 export default function OtpVerificationScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -56,6 +56,11 @@ export default function OtpVerificationScreen() {
       const nextEmptyIndex = newOtp.findIndex(digit => digit === '');
       const focusIndex = nextEmptyIndex === -1 ? 5 : nextEmptyIndex;
       inputRefs.current[focusIndex]?.focus();
+      
+      // Auto-verify if all 6 digits are filled
+      if (newOtp.every(digit => digit !== '')) {
+        setTimeout(() => handleVerify(newOtp.join('')), 100);
+      }
     } else {
       // Handle single digit input
       const newOtp = [...otp];
@@ -66,6 +71,11 @@ export default function OtpVerificationScreen() {
       if (value && index < 5) {
         inputRefs.current[index + 1]?.focus();
       }
+      
+      // Auto-verify if all 6 digits are filled
+      if (newOtp.every(digit => digit !== '')) {
+        setTimeout(() => handleVerify(newOtp.join('')), 100);
+      }
     }
   };
 
@@ -75,11 +85,25 @@ export default function OtpVerificationScreen() {
     }
   };
 
-  const handleVerify = async () => {
-    const otpCode = otp.join('');
+  const handleVerify = async (providedOtp?: string) => {
+    const otpCode = providedOtp || otp.join('');
     
     if (otpCode.length !== 6) {
-      Alert.alert('Error', 'Please enter all 6 digits');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please enter all 6 digits',
+        position: 'top',
+        visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
       return;
     }
 
@@ -88,24 +112,58 @@ export default function OtpVerificationScreen() {
       const { error } = await verifyOtp(email!, otpCode);
       
       if (error) {
-        Alert.alert('Verification Failed', error.message);
+        Toast.show({
+          type: 'error',
+          text1: 'Verification Failed',
+          text2: error.message,
+          position: 'top',
+          visibilityTime: 4000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
         // Clear OTP on error
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       } else {
-        Alert.alert(
-          'Success!',
-          'Your account has been verified successfully.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/auth/login'),
-            }
-          ]
-        );
+        Toast.show({
+          type: 'success',
+          text1: 'Success!',
+          text2: 'Your account has been verified successfully.',
+          position: 'top',
+          visibilityTime: 3000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
+        setTimeout(() => router.replace('/auth/login'), 2000);
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'An unexpected error occurred. Please try again.',
+        position: 'top',
+        visibilityTime: 4000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
       console.error('OTP verification error:', error);
     } finally {
       setLoading(false);
@@ -118,16 +176,58 @@ export default function OtpVerificationScreen() {
       const { error } = await resendOtp(email!);
       
       if (error) {
-        Alert.alert('Error', error.message);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error.message,
+          position: 'top',
+          visibilityTime: 4000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
       } else {
-        Alert.alert('Success', 'A new verification code has been sent to your email.');
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'A new verification code has been sent to your email.',
+          position: 'top',
+          visibilityTime: 3000,
+          text1Style: {
+            fontSize: 18,
+            fontWeight: '600',
+          },
+          text2Style: {
+            fontSize: 16,
+            fontWeight: '500',
+          },
+        });
         setCountdown(60);
         setCanResend(false);
         setOtp(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend code. Please try again.');
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to resend code. Please try again.',
+        position: 'top',
+        visibilityTime: 4000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
       console.error('Resend OTP error:', error);
     } finally {
       setResendLoading(false);
@@ -179,10 +279,12 @@ export default function OtpVerificationScreen() {
             opacity: otp.join('').length === 6 ? 1 : 0.6 
           }
         ]}
-        onPress={handleVerify}
+        onPress={() => handleVerify()}
         disabled={loading || otp.join('').length !== 6}
       >
-        <Text style={[styles.buttonText, { color: 'white' }]}>
+        <Text style={[styles.buttonText, { 
+          color: otp.join('').length === 6 ? 'white' : colors.text 
+        }]}>
           {loading ? 'Verifying...' : 'Verify Code'}
         </Text>
       </TouchableOpacity>
