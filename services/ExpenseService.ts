@@ -103,6 +103,17 @@ export class ExpenseService {
     }
   }
 
+  static async deleteAllExpenses(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('expenses')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error(`Failed to delete all expenses: ${error.message}`);
+    }
+  }
+
   static async getExpenseStats(userId: string): Promise<ExpenseStats> {
     const { data: expenses, error } = await supabase
       .from('expenses')
@@ -111,6 +122,45 @@ export class ExpenseService {
 
     if (error) {
       throw new Error(`Failed to fetch expense stats: ${error.message}`);
+    }
+
+    const stats: ExpenseStats = {
+      totalIncoming: 0,
+      totalOutgoing: 0,
+      netAmount: 0,
+      expenseCount: 0,
+      incomeCount: 0,
+    };
+
+    expenses?.forEach((expense) => {
+      if (expense.type === 'incoming') {
+        stats.totalIncoming += expense.amount;
+        stats.incomeCount += 1;
+      } else {
+        stats.totalOutgoing += expense.amount;
+        stats.expenseCount += 1;
+      }
+    });
+
+    stats.netAmount = stats.totalIncoming - stats.totalOutgoing;
+
+    return stats;
+  }
+
+  static async getExpenseStatsByDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<ExpenseStats> {
+    const { data: expenses, error } = await supabase
+      .from('expenses')
+      .select('amount, type, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+
+    if (error) {
+      throw new Error(`Failed to fetch expense stats by date range: ${error.message}`);
     }
 
     const stats: ExpenseStats = {

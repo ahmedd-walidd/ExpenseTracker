@@ -6,17 +6,16 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useUpdateExpense } from '@/hooks/useExpenses';
 import { Expense } from '@/types/expense';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    TextInput,
-    Alert,
-    Platform
+  Alert,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Toast from 'react-native-toast-message';
 

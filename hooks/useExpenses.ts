@@ -12,6 +12,7 @@ export const expenseKeys = {
   details: () => [...expenseKeys.all, 'detail'] as const,
   detail: (id: string) => [...expenseKeys.details(), id] as const,
   stats: (userId: string) => [...expenseKeys.all, 'stats', userId] as const,
+  statsByPeriod: (userId: string, startDate?: string, endDate?: string) => [...expenseKeys.all, 'stats', userId, startDate, endDate] as const,
 };
 
 // Hook to fetch expenses
@@ -55,6 +56,24 @@ export function useExpenseStats() {
   });
 }
 
+// Hook to fetch expense statistics by date range
+export function useExpenseStatsByPeriod(startDate?: string, endDate?: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: expenseKeys.statsByPeriod(user?.id || '', startDate, endDate),
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      if (!startDate || !endDate) {
+        return await ExpenseService.getExpenseStats(user.id);
+      }
+      return await ExpenseService.getExpenseStatsByDateRange(user.id, startDate, endDate);
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 1, // 1 minute
+  });
+}
+
 // Hook to create expense
 export function useCreateExpense() {
   const queryClient = useQueryClient();
@@ -66,6 +85,8 @@ export function useCreateExpense() {
       // Invalidate and refetch expenses
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: expenseKeys.stats(user?.id || '') });
+      // Also invalidate period-based stats
+      queryClient.invalidateQueries({ queryKey: [...expenseKeys.all, 'stats', user?.id || ''] });
     },
     onError: (error) => {
       console.error('Failed to create expense:', error);
@@ -89,6 +110,8 @@ export function useUpdateExpense() {
       // Invalidate lists to ensure consistency
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: expenseKeys.stats(user?.id || '') });
+      // Also invalidate period-based stats
+      queryClient.invalidateQueries({ queryKey: [...expenseKeys.all, 'stats', user?.id || ''] });
     },
     onError: (error) => {
       console.error('Failed to update expense:', error);
@@ -107,6 +130,8 @@ export function useDeleteExpense() {
       // Invalidate and refetch expenses
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
       queryClient.invalidateQueries({ queryKey: expenseKeys.stats(user?.id || '') });
+      // Also invalidate period-based stats
+      queryClient.invalidateQueries({ queryKey: [...expenseKeys.all, 'stats', user?.id || ''] });
       
       // Show success toast with expense title if available
       const expenseTitle = variables.title;
@@ -136,6 +161,63 @@ export function useDeleteExpense() {
         type: 'error',
         text1: 'Delete Failed',
         text2: 'Failed to delete expense. Please try again.',
+        position: 'top',
+        visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
+    },
+  });
+}
+
+// Hook to reset all expenses
+export function useResetExpenses() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return ExpenseService.deleteAllExpenses(user.id);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch all expense-related queries
+      queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: expenseKeys.stats(user?.id || '') });
+      // Also invalidate period-based stats
+      queryClient.invalidateQueries({ queryKey: [...expenseKeys.all, 'stats', user?.id || ''] });
+      
+      // Show success toast
+      Toast.show({
+        type: 'success',
+        text1: 'All Expenses Reset',
+        text2: 'Your expense history has been cleared successfully',
+        position: 'top',
+        visibilityTime: 3000,
+        text1Style: {
+          fontSize: 18,
+          fontWeight: '600',
+        },
+        text2Style: {
+          fontSize: 16,
+          fontWeight: '500',
+        },
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to reset expenses:', error);
+      
+      // Show error toast
+      Toast.show({
+        type: 'error',
+        text1: 'Reset Failed',
+        text2: 'Failed to reset expenses. Please try again.',
         position: 'top',
         visibilityTime: 3000,
         text1Style: {

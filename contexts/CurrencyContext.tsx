@@ -105,7 +105,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const formatAmount = (amount: number): string => {
-    return `${selectedCurrency.symbol}${amount.toFixed(2)}`;
+    return `${selectedCurrency.symbol}${Math.abs(amount).toFixed(2)}`;
   };
 
   return (

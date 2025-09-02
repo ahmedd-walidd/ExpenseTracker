@@ -4,6 +4,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { useResetExpenses } from '@/hooks/useExpenses';
 import { useProfile } from '@/hooks/useProfile';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
@@ -14,6 +15,7 @@ export default function SettingsScreen() {
   const { selectedCurrency } = useCurrency();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
+  const resetExpenses = useResetExpenses();
   const insets = useSafeAreaInsets();
 
   const handleLogout = async () => {
@@ -40,6 +42,30 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleResetExpenses = async () => {
+    Alert.alert(
+      'Reset All Expenses',
+      'Are you sure you want to delete all expenses? This action cannot be undone and will permanently remove all your expense data.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset All',
+          onPress: async () => {
+            try {
+              await resetExpenses.mutateAsync();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset expenses. Please try again.');
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -52,13 +78,13 @@ export default function SettingsScreen() {
           <ThemedText type="subtitle">Account</ThemedText>
           
           <ThemedView style={styles.settingItem}>
-            <ThemedView style={styles.settingInfo}>
+            <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
               <IconSymbol 
                 name={user ? "person.fill" : "person"} 
                 size={24} 
                 color={user ? "#28a745" : "#666"} 
               />
-              <ThemedView style={styles.settingText}>
+              <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
                 <ThemedText 
                   type="defaultSemiBold"
                   numberOfLines={1}
@@ -97,9 +123,9 @@ export default function SettingsScreen() {
           <ThemedText type="subtitle">App Settings</ThemedText>
           
           <TouchableOpacity style={styles.settingItem}>
-            <ThemedView style={styles.settingInfo}>
+            <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
               <IconSymbol name="bell" size={24} color="#666" />
-              <ThemedView style={styles.settingText}>
+              <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
                 <ThemedText type="defaultSemiBold">Notifications</ThemedText>
                 <ThemedText style={styles.settingDescription}>
                   Manage your notification preferences
@@ -113,9 +139,9 @@ export default function SettingsScreen() {
             style={styles.settingItem}
             onPress={() => setCurrencyModalVisible(true)}
           >
-            <ThemedView style={styles.settingInfo}>
+            <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
               <IconSymbol name="dollarsign.circle" size={24} color="#666" />
-              <ThemedView style={styles.settingText}>
+              <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
                 <ThemedText type="defaultSemiBold">Currency</ThemedText>
                 <ThemedText style={styles.settingDescription}>
                   {selectedCurrency.flag} {selectedCurrency.name} ({selectedCurrency.symbol})
@@ -126,9 +152,9 @@ export default function SettingsScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingItem}>
-            <ThemedView style={styles.settingInfo}>
+            <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
               <IconSymbol name="folder" size={24} color="#666" />
-              <ThemedView style={styles.settingText}>
+              <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
                 <ThemedText type="defaultSemiBold">Categories</ThemedText>
                 <ThemedText style={styles.settingDescription}>
                   Manage expense categories
@@ -137,15 +163,35 @@ export default function SettingsScreen() {
             </ThemedView>
             <IconSymbol name="chevron.right" size={16} color="#666" />
           </TouchableOpacity>
+
+          {user && (
+            <TouchableOpacity 
+              style={[styles.settingItem, styles.resetItem]}
+              onPress={handleResetExpenses}
+              disabled={resetExpenses.isPending}
+            >
+              <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
+                <IconSymbol name="trash" size={24} color="#dc3545" />
+                <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
+                  <ThemedText type="defaultSemiBold" style={styles.resetText}>
+                    Reset All Expenses
+                  </ThemedText>
+                  <ThemedText style={styles.settingDescription}>
+                    {resetExpenses.isPending ? 'Resetting...' : 'Delete all expenses and start fresh'}
+                  </ThemedText>
+                </ThemedView>
+              </ThemedView>
+            </TouchableOpacity>
+          )}
         </ThemedView>
 
         <ThemedView style={styles.section}>
           <ThemedText type="subtitle">About</ThemedText>
           
           <ThemedView style={styles.settingItem}>
-            <ThemedView style={styles.settingInfo}>
+            <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
               <IconSymbol name="info.circle" size={24} color="#666" />
-              <ThemedView style={styles.settingText}>
+              <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
                 <ThemedText type="defaultSemiBold">Version</ThemedText>
                 <ThemedText style={styles.settingDescription}>
                   Expense Tracker v1.0.0
@@ -232,5 +278,13 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: 'white',
+  },
+  resetItem: {
+    backgroundColor: 'rgba(220, 53, 69, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(220, 53, 69, 0.2)',
+  },
+  resetText: {
+    color: '#dc3545',
   },
 });

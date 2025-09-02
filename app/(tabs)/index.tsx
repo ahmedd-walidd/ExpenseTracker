@@ -3,10 +3,11 @@ import SortButtons from '@/components/SortButtons';
 import SwipeableExpenseItem from '@/components/SwipeableExpenseItem';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { formatPeriodRange, getDateRange, TimePeriod, TimePeriodSelector } from '@/components/TimePeriodSelector';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
-import { useExpenses, useExpenseStats } from '@/hooks/useExpenses';
+import { useExpenses, useExpenseStatsByPeriod } from '@/hooks/useExpenses';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Expense } from '@/types/expense';
 import { sortExpenses, SortOrder, SortType } from '@/utils/sortExpenses';
@@ -19,12 +20,30 @@ export default function HomeScreen() {
   const { formatAmount } = useCurrency();
   const { user } = useAuth();
   const { data: expenses, isLoading: expensesLoading } = useExpenses();
-  const { data: stats, isLoading: statsLoading } = useExpenseStats();
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [sortType, setSortType] = useState<SortType>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const textColor = useThemeColor({}, 'text');
+
+  // Get date range for selected period
+  const dateRange = useMemo(() => {
+    if (selectedPeriod === 'all') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    const { startDate, endDate } = getDateRange(selectedPeriod);
+    return {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    };
+  }, [selectedPeriod]);
+
+  // Get stats for the selected period
+  const { data: stats, isLoading: statsLoading } = useExpenseStatsByPeriod(
+    dateRange.startDate,
+    dateRange.endDate
+  );
   
   const recentExpenses = useMemo(() => {
     const rawExpenses = expenses?.slice(0, 10) || [];
@@ -56,8 +75,22 @@ export default function HomeScreen() {
         <ThemedView style={styles.section}>
           <ThemedText type="subtitle">Overview</ThemedText>
           <ThemedText style={styles.description}>
-            View all your expenses in one place. This screen will show both incoming and outgoing transactions.
+            View your expense summary for the selected time period.
           </ThemedText>
+          
+          <ThemedView style={styles.timePeriodContainer}>
+            <TimePeriodSelector
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
+            />
+          </ThemedView>
+          
+          <ThemedView style={styles.periodInfo}>
+            <IconSymbol name="calendar" size={16} color="#666" />
+            <ThemedText style={styles.periodText}>
+              {formatPeriodRange(selectedPeriod)}
+            </ThemedText>
+          </ThemedView>
         </ThemedView>
 
         <ThemedView style={styles.statsContainer}>
@@ -115,9 +148,11 @@ export default function HomeScreen() {
               minimumFontScale={0.6}
             >
               {statsLoading ? '...' : 
-                (stats?.netAmount || 0) > 0 
-                  ? `+${formatAmount(stats?.netAmount || 0)}`
-                  : formatAmount(stats?.netAmount || 0)
+                (stats?.netAmount || 0) === 0 
+                  ? formatAmount(stats?.netAmount || 0)
+                  : (stats?.netAmount || 0) > 0 
+                    ? `+${formatAmount(stats?.netAmount || 0)}`
+                    : `-${formatAmount(stats?.netAmount || 0)}`
               }
             </ThemedText>
           </ThemedView>
@@ -280,5 +315,23 @@ const styles = StyleSheet.create({
   expenseAmount: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  periodInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 0,
+    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderRadius: 6,
+  },
+  periodText: {
+    fontSize: 14,
+    marginLeft: 6,
+    opacity: 0.8,
+    fontWeight: '500',
+  },
+  timePeriodContainer: {
+    marginTop: 20,
+    marginBottom: 5,
   },
 });
