@@ -10,6 +10,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<{ data?: any; error?: any }>;
+  resendOtp: (email: string) => Promise<{ data?: any; error?: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: undefined, // Disable email confirmation, use OTP instead
         },
       });
 
@@ -80,18 +83,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return { error: new Error('No user data returned from signup') };
       }
 
-      // Try to create profile using the service
-      try {
-        await ProfileService.createProfile({
-          id: data.user.id,
-          email: data.user.email!,
-          full_name: fullName || null,
-          currency: 'EGP',
-        });
-      } catch (profileError) {
-        console.error('Error creating profile:', profileError);
-        // Don't fail signup if profile creation fails
-      }
+      // Don't create profile yet - wait for OTP verification
+      // Profile will be created after successful OTP verification
 
       return { error: null };
     } catch (err) {
@@ -107,6 +100,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const verifyOtp = async (email: string, otp: string) => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'signup'
+      });
+
+      if (error) {
+        console.error('OTP verification error:', error);
+        return { error };
+      }
+
+      // Create profile after successful OTP verification
+      if (data.user) {
+        try {
+          await ProfileService.createProfile({
+            id: data.user.id,
+            email: data.user.email!,
+            full_name: data.user.user_metadata?.full_name || null,
+            currency: 'EGP',
+          });
+        } catch (profileError) {
+          console.error('Error creating profile:', profileError);
+          // Don't fail verification if profile creation fails
+        }
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      console.error('Unexpected OTP verification error:', err);
+      return { error: err };
+    }
+  };
+
+  const resendOtp = async (email: string) => {
+    try {
+      const { data, error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+
+      if (error) {
+        console.error('Resend OTP error:', error);
+        return { error };
+      }
+
+      return { data, error: null };
+    } catch (err) {
+      console.error('Unexpected resend OTP error:', err);
+      return { error: err };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -114,6 +161,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn,
     signUp,
     signOut,
+    verifyOtp,
+    resendOtp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

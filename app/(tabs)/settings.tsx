@@ -151,19 +151,6 @@ export default function SettingsScreen() {
             <IconSymbol name="chevron.right" size={16} color="#666" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem}>
-            <ThemedView style={styles.settingInfo} lightColor="transparent" darkColor="transparent">
-              <IconSymbol name="folder" size={24} color="#666" />
-              <ThemedView style={styles.settingText} lightColor="transparent" darkColor="transparent">
-                <ThemedText type="defaultSemiBold">Categories</ThemedText>
-                <ThemedText style={styles.settingDescription}>
-                  Manage expense categories
-                </ThemedText>
-              </ThemedView>
-            </ThemedView>
-            <IconSymbol name="chevron.right" size={16} color="#666" />
-          </TouchableOpacity>
-
           {user && (
             <TouchableOpacity 
               style={[styles.settingItem, styles.resetItem]}

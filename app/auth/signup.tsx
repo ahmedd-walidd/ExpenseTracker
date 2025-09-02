@@ -7,15 +7,15 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -64,16 +64,11 @@ export default function SignupScreen() {
         
         Alert.alert('Sign Up Error', errorMessage);
       } else {
-        Alert.alert(
-          'Success', 
-          'Account created successfully! Please check your email for verification.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/auth/login'),
-            }
-          ]
-        );
+        // Redirect to OTP verification screen
+        router.push({
+          pathname: '/auth/otp-verification',
+          params: { email }
+        });
       }
     } catch (error) {
       console.error('Unexpected error during signup:', error);
